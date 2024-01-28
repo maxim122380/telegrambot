@@ -9,16 +9,16 @@ def reqapi(ip):
     r = requests.get(url).json()
     return r
 
+def genetator_keybords(ListNameBTN, NumberColumns = 2):
+    keyboards = telebot.types.ReplyKeyboardMarkup(row_width=NumberColumns, resize_keyboard=True)
+    btn_names = [telebot.types.KeyboardButton(text=x) for x in ListNameBTN]
+    keyboards.add(*btn_names)
+    return keyboards
+
 
 @bot.message_handler(commands=["start"])
 def start(message):
-    keyboard = telebot.types.ReplyKeyboardMarkup(resize_keyboard=True)
-    button_support = telebot.types.KeyboardButton(text="Написать в поддержку") 
-    button1 = telebot.types.KeyboardButton(text="Кнопка 1")
-    button2 = telebot.types.KeyboardButton(text="Кнопка 2")
-    button3 = telebot.types.KeyboardButton(text="Кнопка 3")
-    keyboard.add(button_support, button1, button2, button3)
-    msg = bot.send_message(message.chat.id, "hello", reply_markup=keyboard)
+    msg = bot.send_message(message.chat.id, "Hello", reply_markup=genetator_keybords(["Support", "Stop"]))
     bot.register_next_step_handler(msg, getip)
 
 def getip(message):

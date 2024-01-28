@@ -16,7 +16,7 @@ def start(message):
     bot.register_next_step_handler(msg, getip)
 
 def getip(message):
-    ip = message.text
+    ip = message.textvxcvxcvxc
     res = str(reqapi(ip))
     bot.send_message(message.chat.id, res)
 

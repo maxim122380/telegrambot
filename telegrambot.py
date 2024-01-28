@@ -18,7 +18,7 @@ def genetator_keybords(ListNameBTN, NumberColumns = 2):
 
 @bot.message_handler(commands=["start"])
 def start(message):
-    msg = bot.send_message(message.chat.id, "Hello", reply_markup=genetator_keybords(["Support(поддержка)", "Stop(стоп)"]))
+    msg = bot.send_message(message.chat.id, "Hello", reply_markup=genetator_keybords(["Support(поддержка)", "Stop(стоп)", "Find out the ip(узнать ip)"]))
     bot.register_next_step_handler(msg, getip)
 
 def getip(message):
@@ -30,9 +30,12 @@ def getip(message):
 def text(message):
     text = message.text
     print(text)
-    if text == "Support":
+    if text == "Support(поддержка)":
         bot.send_message(message.chat.id, "Я вас слушаю")
-    
+    elif text == "Stop(стоп)":
+        bot.send_message(message.chat.id, "До свидания")
+    elif text == "Find out the ip(узнать ip)":
+        reqapi()
 
 
 if __name__ == '__main__':

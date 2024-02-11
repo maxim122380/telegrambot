@@ -14,5 +14,17 @@ class Database:
         self.conn.commit()
         return True
     
+    def update_balance(self, id, balance, status):
+        """
+        status = True - add balance
+        status = False - take balance
+        """
+        if status:
+            self.cursor.execute(f"UPDATE users SET balance=balance+? WHERE id=?", (balance, id))
+        else:
+            self.cursor.execute(f"UPDATE users SET balance=balance-? WHERE id=?", (balance, id))
+        self.conn.commit()
+        return True
+    
 db = Database()
 print(db.regitser(""))

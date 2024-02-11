@@ -9,14 +9,27 @@ class Database:
         self.conn = sqlite3.connect("base.db", check_same_thread=False)
         self.cursor = self.conn.cursor()
     
-    def get_users(self, id):
-        self.cursor.execute(f"SELECT user_name FROM users WHERE id={id}")
-        return self.cursor.fetchone()[0]
+    def get_users(self, user_id):
+        self.cursor.execute(f"SELECT user_name FROM users WHERE id={user_id}")
+        return self.cursor.fetchone()
     
-    def regitser(self, name):
-        self.cursor.execute(f"INSERT INTO users VALUES (?)", (name,))
+    def regitser(self, user_id, user_name):
+        self.cursor.execute(f"INSERT INTO users (id, user_name)VALUES (?, ?)", (user_id, user_name))
+        self.conn.commit() 
+        return True
+    
+    def update_balance(self, id, balance, status):
+        """
+        status = True - add balance
+        status = False - take balance
+        """
+        if status:
+            self.cursor.execute(f"UPDATE users SET balance=balance+? WHERE id=?", (balance, id))
+        else:
+            self.cursor.execute(f"UPDATE users SET balance=balance-? WHERE id=?", (balance, id))
         self.conn.commit()
         return True
+db = Database()
 
 env = Env()
 env.read_env()
@@ -26,44 +39,52 @@ bot = telebot.TeleBot(token)
 
 @bot.message_handler(commands=['start'])
 def start(message):
+    user_id = message.from_user.id
+    user_name = message.from_user.username
+    if db.get_users(user_id):
+        bot.send_message(message.chat.id, "Добро пожаловать!")
+    else:
+        db.regitser(str(user_id), user_name)
+        bot.send_message(message.chat.id, "Спасибо за регистрацию, Добро пожаловать!")
+
+    db.update_balance(user_id, "1000", True)
     markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
     aas1 = types.KeyboardButton("👋 Поздороваться")
     aas2 = types.KeyboardButton("❓ Задать вопрос")
-    markup.add(aas1, aas2)
+    aas3 = types.KeyboardButton("/bot")
+    aas4 = types.KeyboardButton("/shop")
+    markup.add(aas1, aas2, aas3, aas4)
     bot.send_message(message.chat.id, text="Привет, {0.first_name}! Я бот Масяня".format(message.from_user), reply_markup=markup)
 
-@bot.message_handler(content_types=['text'])
-def func(message):
-    if(message.text == "👋 Поздороваться"):
-        bot.send_message(message.chat.id, text="Привеет.. Спасибо что читаешь статью!)")
-    elif(message.text == "❓ Задать вопрос"):
-        markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
-        btn1 = types.KeyboardButton("Как меня зовут?")
-        btn2 = types.KeyboardButton("Что я могу?")
-        back = types.KeyboardButton("Вернуться в главное меню")
-        markup.add(btn1, btn2, back)
-        bot.send_message(message.chat.id, text="Задай мне вопрос", reply_markup=markup)
-    
-    elif(message.text == "Как меня зовут?"):
-        bot.send_message(message.chat.id, "У меня нет имени..")
-    
-    elif message.text == "Что я могу?":
-        bot.send_message(message.chat.id, text="Поздороваться с читателями")
-    
-    elif (message.text == "Вернуться в главное меню"):
-        markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
-        button1 = types.KeyboardButton("👋 Поздороваться")
-        button2 = types.KeyboardButton("❓ Задать вопрос")
-        markup.add(button1, button2)
-        bot.send_message(message.chat.id, text="Вы вернулись в главное меню", reply_markup=markup)
-    else:
-        bot.send_message(message.chat.id, text="На такую комманду я не запрограммировал..")
+@bot.message_handler(commands=['shop'])
+def start_shop(message):
+    keyboard = types.InlineKeyboardMarkup()
+    keyboard.add(types.InlineKeyboardButton("За покупками!", callback_data="startshop"))
+    bot.send_message(message.chat.id, f'Меню магазина:', reply_markup=keyboard)
 
-db = Database()
-print(db.regitser(""))
+@bot.callback_query_handler(func=lambda call: True)
+def callback_handler_shop(call):
+    if call.data == "startshop":
+        markup = types.InlineKeyboardMarkup()
+        shop1 = types.InlineKeyboardButton("Назад", callback_data="nazad")
+        shop2 = types.InlineKeyboardButton("Пополнить баланс", callback_data="balanse")
+        shop3 = types.InlineKeyboardButton("Зайти в магазин", callback_data="magazin")
+        markup.add(shop1, shop2, shop3)
+        bot.edit_message_reply_markup(chat_id=call.message.chat.id, message_id=call.message.message_id, reply_markup=markup)
+    elif call.data == "balanse":
+        markup = types.InlineKeyboardMarkup()
+        sh1 = types.InlineKeyboardButton("Назад", callback_data="nazad")
+        sh2 = types.InlineKeyboardButton("+1000", callback_data="1000")
+        sh3 = types.InlineKeyboardButton("+2000", callback_data="2000")
+        sh4 = types.InlineKeyboardButton("+3000", callback_data="3000")
+        sh5 = types.InlineKeyboardButton("+4000", callback_data="4000")
+        sh6 = types.InlineKeyboardButton("+5000", callback_data="5000")
+        markup.add(sh2, sh1, sh3, sh4, sh5, sh6)
+    
+
 
 @bot.message_handler(commands=['bot'])
-def start(message):
+def start_bot(message):
     keyboard = types.InlineKeyboardMarkup()
     keyboard.add(types.InlineKeyboardButton("🟩Начать", callback_data="start"))
     bot.send_message(message.chat.id, f'Меню программы:', reply_markup=keyboard)
@@ -76,13 +97,14 @@ def callback_handler(call):
         btn3 = types.InlineKeyboardButton("Заказать еду", callback_data="eating")
         btn4 = types.InlineKeyboardButton("Техно-блог", callback_data="tecno")
         btn5 = types.InlineKeyboardButton("Техника", callback_data="texnika")
+        btn7 = types.InlineKeyboardButton("🛑Stop🛑", callback_data="final_stop")
         btn6 = types.InlineKeyboardButton("Писатели", callback_data="pisary")
-        markup.add(btn2, btn3, btn4, btn5, btn6)
+        markup.add(btn2, btn3, btn4, btn5, btn7, btn6)
         bot.edit_message_reply_markup(chat_id=call.message.chat.id, message_id=call.message.message_id, reply_markup=markup)
 
     elif call.data == "pisary":
         markup = types.InlineKeyboardMarkup()
-        p1 = types.InlineKeyboardButton("🟥Вернуться🟥", callback_data="stop")
+        p1 = types.InlineKeyboardButton("➥Вернуться➥", callback_data="stop")
         p2 = types.InlineKeyboardButton("Пушкин", callback_data="pushkin", url="https://www.culture.ru/persons/8195/aleksandr-pushkin")
         p3 = types.InlineKeyboardButton("Лермонтов", callback_data="lermontov", url="https://www.culture.ru/persons/8188/mikhail-lermontov")
         p4= types.InlineKeyboardButton("Толстой", callback_data="tolstoy", url="https://www.culture.ru/persons/8211/lev-tolstoi")
@@ -96,7 +118,7 @@ def callback_handler(call):
 
     elif call.data == "market":
         markup = types.InlineKeyboardMarkup()
-        bt1 = types.InlineKeyboardButton("🟥Вернуться🟥", callback_data="stop")
+        bt1 = types.InlineKeyboardButton("➥Вернуться➥", callback_data="stop")
         bt2 = types.InlineKeyboardButton("Ozon", callback_data="ozon", url="https://www.ozon.ru/")
         bt3 = types.InlineKeyboardButton("Wildberries", callback_data="wildberries", url="https://www.wildberries.ru/")
         bt4= types.InlineKeyboardButton("Aliexpress", callback_data="aliexpress", url="https://aliexpress.ru/")
@@ -106,7 +128,7 @@ def callback_handler(call):
     
     elif call.data == "tecno":
         markup = types.InlineKeyboardMarkup()
-        b1 = types.InlineKeyboardButton("🟥Вернуться🟥", callback_data="stop")
+        b1 = types.InlineKeyboardButton("➥Вернуться➥", callback_data="stop")
         b2 = types.InlineKeyboardButton("Wylsacom", callback_data="wylsacom", url="https://t.me/Wylsared")
         b3 = types.InlineKeyboardButton("Romancev768", callback_data="romancev768", url="https://t.me/Romancev768")
         b4 = types.InlineKeyboardButton("Наука и техника", callback_data="science", url="https://t.me/Scienceg")
@@ -117,7 +139,7 @@ def callback_handler(call):
 
     elif call.data == "eating":
         markup = types.InlineKeyboardMarkup()
-        btt1 = types.InlineKeyboardButton("🟥Вернуться🟥", callback_data="stop")
+        btt1 = types.InlineKeyboardButton("➥Вернуться➥", callback_data="stop")
         btt2 = types.InlineKeyboardButton("Додо Пицца", callback_data="dodopizza", url="https://dodopizza.ru/")
         btt3 = types.InlineKeyboardButton("ТоТо Пицца", callback_data="totopizza", url="https://kovrov.totopizza.ru/")
         btt4= types.InlineKeyboardButton("Бургер Кинг", callback_data="burgerking", url="https://burgerkingrus.ru/")
@@ -128,7 +150,7 @@ def callback_handler(call):
 
     elif call.data == "texnika":
         markup = types.InlineKeyboardMarkup()
-        s1 = types.InlineKeyboardButton("🟥Вернуться🟥", callback_data="stop")
+        s1 = types.InlineKeyboardButton("➥Вернуться➥", callback_data="stop")
         s2 = types.InlineKeyboardButton("DNS", callback_data="dns", url="https://www.dns-shop.ru/")
         s3 = types.InlineKeyboardButton("М.видео", callback_data="mvideo", url="https://www.mvideo.ru/")
         s4= types.InlineKeyboardButton("Эльдорадо", callback_data="eldorado", url="https://www.eldorado.ru/?utm_source=google&utm_medium=organic&utm_campaign=google&utm_referrer=google")
@@ -143,8 +165,41 @@ def callback_handler(call):
         btn3 = types.InlineKeyboardButton("Заказать еду", callback_data="eating")
         btn4 = types.InlineKeyboardButton("Техно-блог", callback_data="tecno")
         btn5 = types.InlineKeyboardButton("Техника", callback_data="texnika")
+        btn7 = types.InlineKeyboardButton("🛑Stop🛑", callback_data="final_stop")
         btn6 = types.InlineKeyboardButton("Писатели", callback_data="pisary")
-        markup.add(btn2, btn3, btn4, btn5, btn6)
+        markup.add(btn2, btn3, btn4, btn5, btn7, btn6)
         bot.edit_message_reply_markup(chat_id=call.message.chat.id, message_id=call.message.message_id, reply_markup=markup)
 
+    elif call.data == "final_stop":
+        bot.delete_message(call.message.chat.id, call.message.message_id)
+
+@bot.message_handler(content_types=['text'])
+def func(message):
+    if(message.text == "👋 Поздороваться"):
+        bot.send_message(message.chat.id, text="Привеет..)")
+    elif(message.text == "❓ Задать вопрос"):
+        markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
+        aas1 = types.KeyboardButton("Как меня зовут?")
+        aas2 = types.KeyboardButton("Что я могу?")
+        back = types.KeyboardButton("Вернуться в главное меню")
+        markup.add(aas1, aas2, back)
+        bot.send_message(message.chat.id, text="Задай мне вопрос", reply_markup=markup)
+    
+    elif(message.text == "Как меня зовут?"):
+        bot.send_message(message.chat.id, "Меня зовут Масяня.")
+    
+    elif message.text == "Что я могу?":
+        bot.send_message(message.chat.id, text="Поздороваться с читателями")
+    
+    elif (message.text == "Вернуться в главное меню"):
+        markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
+        aas1 = types.KeyboardButton("👋 Поздороваться")
+        aas2 = types.KeyboardButton("❓ Задать вопрос")
+        aas3 = types.KeyboardButton("/bot")
+        aas4 = types.KeyboardButton("/shop")
+        markup.add(aas1, aas2, aas3, aas4)
+        bot.send_message(message.chat.id, text="Вы вернулись в главное меню", reply_markup=markup)
+
 bot.polling(none_stop=True)
+if __name__ == "__main__":
+    bot.infinity_polling()

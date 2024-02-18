@@ -2,9 +2,10 @@ import telebot
 from environs import Env
 from telebot import types
 from random import *
-import bd_test
+import alhimi
 
-db = bd_test.Database()
+
+db = alhimi.Database()
 
 env = Env()
 env.read_env()
@@ -12,14 +13,15 @@ token = env('TOKEN')
 
 bot = telebot.TeleBot(token)
 
+
 @bot.message_handler(commands=['start'])
 def start(message):
     user_id = message.from_user.id
     user_name = message.from_user.username
-    if db.get_users(user_id):
+    if db.get_user(user_id):
         bot.send_message(message.chat.id, "Добро пожаловать!")
     else:
-        db.register(str(user_id), user_name)
+        db.regitser(str(user_id), user_name)
         bot.send_message(message.chat.id, "Спасибо за регистрацию, Добро пожаловать!")
     markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
     aas1 = types.KeyboardButton("👋 Поздороваться")
@@ -40,8 +42,8 @@ def callback_handler_shop(call):
     if call.data == "startshop":
         markup = types.InlineKeyboardMarkup()
         shop1 = types.InlineKeyboardButton("🛑Stop🛑", callback_data="finaly_stop")
-        shop2 = types.InlineKeyboardButton("Пополнить баланс", callback_data="balanse")
-        shop3 = types.InlineKeyboardButton("Зайти в магазин", callback_data="magazin")
+        shop2 = types.InlineKeyboardButton("💳Пополнить баланс", callback_data="balanse")
+        shop3 = types.InlineKeyboardButton("🛒Зайти в магазин", callback_data="magazin")
         markup.add(shop2, shop1, shop3)
         bot.edit_message_reply_markup(chat_id=call.message.chat.id, message_id=call.message.message_id, reply_markup=markup)
 
@@ -79,12 +81,13 @@ def callback_handler_shop(call):
     elif call.data == "magazin":
         markup = types.InlineKeyboardMarkup()
         sh1 = types.InlineKeyboardButton("⇧Назад⇧", callback_data="nazad")
+        nam = types.InlineKeyboardButton("🛠️Админка", callback_data="admin")
         magazin1 = types.InlineKeyboardButton("Напитки🥃", callback_data="beverages")
         magazin2 = types.InlineKeyboardButton("Хлебобулки🍞", callback_data="bakery")
         magazin3 = types.InlineKeyboardButton("Кондитерка🍣", callback_data="confectioner")
         magazin4 = types.InlineKeyboardButton("Химия🧪", callback_data="chemistry")
         magazin5 = types.InlineKeyboardButton("Молочка🥛", callback_data="milk")
-        markup.add(magazin1, sh1, magazin2, magazin3, magazin4, magazin5)
+        markup.add(magazin1, sh1, magazin2, magazin3, nam, magazin4, magazin5)
         bot.edit_message_reply_markup(chat_id=call.message.chat.id, message_id=call.message.message_id, reply_markup=markup)
 
     elif call.data == "bakery":
